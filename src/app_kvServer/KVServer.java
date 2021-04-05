@@ -402,6 +402,17 @@ public class KVServer extends Thread implements IKVServer{
 					System.out.println("Starting commModule");
 					CommModule connection =
 							new CommModule(client, this);
+
+					// Diffie-Hellman Key Exchange
+					connection.sendSecret();
+					BigInteger receivedSecret = null;
+					try {
+						receivedSecret = connection.receiveSecret();
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+					connection.setKey(receivedSecret);
+
 					new Thread(connection).start();
 
 					logger.info("Connected to "

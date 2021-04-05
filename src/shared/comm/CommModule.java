@@ -10,9 +10,15 @@ import javax.swing.*;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.math.BigInteger;
 import java.net.Socket;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Random;
 
 import static shared.messages.KVMessage.StatusType;
 import static shared.messages.KVMessage.StatusType.*;
@@ -26,6 +32,17 @@ public class CommModule implements ICommModule, Runnable {
     private ObjectInputStream input;
     private KVServer server;
     private boolean isOpen;
+    private int secretInt; // x or y in g^(xy) mod p for Diffie-Hellman key exchange
+    private int key; // encryption key
+    private int g = 2; // generator number
+    private BigInteger p = new BigInteger("FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD1" +
+                                            "29024E088A67CC74020BBEA63B139B22514A08798E3404DD" +
+                                            "EF9519B3CD3A431B302B0A6DF25F14374FE1356D6D51C245" +
+                                            "E485B576625E7EC6F44C42E9A637ED6B0BFF5CB6F406B7ED" +
+                                            "EE386BFB5A899FA5AE9F24117C4B1FE649286651ECE45B3D" +
+                                            "C2007CB8A163BF0598DA48361C55D39A69163FA8FD24CF5F" +
+                                            "83655D23DCA3AD961C62F356208552BB9ED529077096966D" +
+                                            "670C354E4ABC9804F1746C08CA237327FFFFFFFFFFFFFFFF", 16);
 
     /**
      * @param socket Client Socket (output of socket.accept() for the server, socket for the client), or ECS Socket.
@@ -47,6 +64,8 @@ public class CommModule implements ICommModule, Runnable {
         this.isOpen = true;
         this.server = server;
         this.socket = socket;
+        Random random = new Random();
+        this.secretInt = random.nextInt(65536); // Secret is a 16-bit unsigned number
     }
 
     /**
@@ -362,4 +381,79 @@ public class CommModule implements ICommModule, Runnable {
             logger.info("Connection closed!");
         }
     }
+
+    @Override
+    public BigInteger receiveSecret() throws Exception {
+        BigInteger secret = null;
+
+        try {
+            secret = (BigInteger) this.input.readObject();
+        } catch (Exception e) {
+            logger.error("No secret.");
+        }
+
+        if (secret != null){
+            if (this.server != null) {
+                logger.info("Secret received by server -> P = " + secret.toString());
+            } else {
+                logger.info("Secret received by client -> Q = " + secret.toString());
+            }
+        }
+
+        return secret;
+    }
+
+    @Override
+    public void sendSecret() throws IOException {
+        BigInteger V = fastModExp(new BigInteger(String.valueOf(this.g)), this.secretInt, this.p);
+
+        this.output.writeObject(V);
+        this.output.flush();
+
+        if (this.server != null) {
+            logger.info("Message sent by server -> Q = " + V.toString());
+        } else {
+            logger.info("Message sent by client -> P = " + V.toString());
+        }
+    }
+
+    @Override
+    public void setKey(BigInteger secret) {
+        BigInteger sharedSecret = fastModExp(secret, this.secretInt, this.p); // S = Q^x mod(p) = P^y mod(p) = g^(xy) mod(p)
+
+        // Get key SHA-256 hash value as an integer (key)
+        MessageDigest sha256 = null;
+        try {
+            sha256 = MessageDigest.getInstance("SHA-256");
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        }
+        sha256.update(sharedSecret.toByteArray());
+        byte[] digest = sha256.digest();
+
+        this.key = ByteBuffer.wrap(Arrays.copyOfRange(digest, 0, 4)).getInt(); // Get lowest 4 bytes of hash: key
+    }
+
+    private BigInteger fastModExp(BigInteger G, int x, BigInteger p) { // Compute g^x mod(p) using exp by squaring
+
+        if (x == 0) {
+            return BigInteger.ONE;
+        }
+
+        BigInteger Y = BigInteger.ONE;
+
+        while (x > 1) {
+            if (x%2 == 0) {
+                G = (G.multiply(G)).mod(p);
+                x = x/2;
+            } else {
+                Y = (G.multiply(Y)).mod(p);
+                G = (G.multiply(G)).mod(p);
+                x = (x-1)/2;
+            }
+        }
+
+        return G.multiply(Y).mod(p);
+    }
+
 }

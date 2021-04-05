@@ -4,6 +4,7 @@ import shared.messages.KVMessage;
 import shared.messages.KVMsg;
 
 import java.io.IOException;
+import java.math.BigInteger;
 import java.util.HashMap;
 
 public interface ICommModule {
@@ -15,4 +16,10 @@ public interface ICommModule {
     public KVMsg serve(KVMsg msg) throws Exception;
 
     public void closeConnection();
+
+    public BigInteger receiveSecret() throws Exception;
+
+    public void sendSecret() throws IOException;
+
+    public void setKey(BigInteger secret);
 }

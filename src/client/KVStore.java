@@ -42,6 +42,12 @@ public class KVStore extends Thread implements KVCommInterface {
 	public void connect() throws Exception {
 		this.clientSocket = new Socket(this.address, this.port);
 		this.clientComm = new CommModule(this.clientSocket, null);
+
+		// Diffie-Hellman Key Exchange
+		this.clientComm.sendSecret();
+		BigInteger receivedSecret = this.clientComm.receiveSecret();
+		this.clientComm.setKey(receivedSecret);
+
 	}
 
 	/**
