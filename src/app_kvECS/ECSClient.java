@@ -423,7 +423,7 @@ public class ECSClient implements IECSClient, Watcher {
         //inodes.add(inode);
         Process proc;
         String scriptPath = System.getProperty("user.dir")+"/src/app_kvECS/startnode.sh";
-        String serverPath = System.getProperty("user.dir")+"/m2-server.jar";
+        String serverPath = System.getProperty("user.dir")+"/m4-server.jar";
 
         String[] cmd = {"sh", scriptPath, node.getNodeHost(),serverPath,String.valueOf(node.getNodePort()),name};
         for (int j = 0; j<6;j++) {
@@ -540,7 +540,7 @@ public class ECSClient implements IECSClient, Watcher {
             inodes.add(inode);
             Process proc;
             String scriptPath = System.getProperty("user.dir")+"/src/app_kvECS/startnode.sh";
-            String serverPath = System.getProperty("user.dir")+"/m2-server.jar";
+            String serverPath = System.getProperty("user.dir")+"/m4-server.jar";
 
             String[] cmd = {"sh", scriptPath, node.getNodeHost(),serverPath,String.valueOf(node.getNodePort()),name};
             for (int j = 0; j<6;j++) {
