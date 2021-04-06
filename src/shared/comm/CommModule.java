@@ -64,8 +64,30 @@ public class CommModule implements ICommModule, Runnable {
         this.isOpen = true;
         this.server = server;
         this.socket = socket;
+
         Random random = new Random();
         this.secretInt = random.nextInt(65536); // Secret is a 16-bit unsigned number
+	if (server != null) {
+		logger.debug("Server secret int: " + String.valueOf(this.secretInt));
+	} else {
+		logger.debug("Client secret int: " + String.valueOf(this.secretInt));
+	}
+	// Diffie-Hellman Key Exchange
+	try {
+		this.sendSecret();
+	} catch (IOException ioe) {
+		logger.error("Error! Could not send secret! ", ioe);
+	}
+	BigInteger receivedSecret = null;
+	while (receivedSecret == null) {
+		try {
+			receivedSecret = this.receiveSecret();
+		} catch (Exception e) {
+			continue;
+		}	
+	}
+	this.setKey(receivedSecret);
+
     }
 
     /**
@@ -394,9 +416,9 @@ public class CommModule implements ICommModule, Runnable {
 
         if (secret != null){
             if (this.server != null) {
-                logger.info("Secret received by server -> P = " + secret.toString());
+                logger.debug("Secret received by server -> P = " + secret.toString());
             } else {
-                logger.info("Secret received by client -> Q = " + secret.toString());
+                logger.debug("Secret received by client -> Q = " + secret.toString());
             }
         }
 
@@ -411,9 +433,9 @@ public class CommModule implements ICommModule, Runnable {
         this.output.flush();
 
         if (this.server != null) {
-            logger.info("Message sent by server -> Q = " + V.toString());
+        	logger.debug("Secret sent by server -> Q = " + V.toString());
         } else {
-            logger.info("Message sent by client -> P = " + V.toString());
+        	logger.debug("Secret sent by client -> P = " + V.toString());
         }
     }
 
@@ -432,9 +454,10 @@ public class CommModule implements ICommModule, Runnable {
         byte[] digest = sha256.digest();
 
         this.key = ByteBuffer.wrap(Arrays.copyOfRange(digest, 0, 4)).getInt(); // Get lowest 4 bytes of hash: key
+	logger.debug("Key is: " + String.valueOf(key));
     }
 
-    private BigInteger fastModExp(BigInteger G, int x, BigInteger p) { // Compute g^x mod(p) using exp by squaring
+    private BigInteger fastModExp(BigInteger G, int x, BigInteger p) { // Compute g^x mod(p) fast using exp by squaring
 
         if (x == 0) {
             return BigInteger.ONE;

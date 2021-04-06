@@ -44,9 +44,9 @@ public class KVStore extends Thread implements KVCommInterface {
 		this.clientComm = new CommModule(this.clientSocket, null);
 
 		// Diffie-Hellman Key Exchange
-		this.clientComm.sendSecret();
-		BigInteger receivedSecret = this.clientComm.receiveSecret();
-		this.clientComm.setKey(receivedSecret);
+		//this.clientComm.sendSecret();
+		//BigInteger receivedSecret = this.clientComm.receiveSecret();
+		//this.clientComm.setKey(receivedSecret);
 
 	}
 

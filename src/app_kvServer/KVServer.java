@@ -404,14 +404,14 @@ public class KVServer extends Thread implements IKVServer{
 							new CommModule(client, this);
 
 					// Diffie-Hellman Key Exchange
-					connection.sendSecret();
+					/*connection.sendSecret();
 					BigInteger receivedSecret = null;
 					try {
 						receivedSecret = connection.receiveSecret();
 					} catch (Exception e) {
 						e.printStackTrace();
 					}
-					connection.setKey(receivedSecret);
+					connection.setKey(receivedSecret);*/
 
 					new Thread(connection).start();
 
