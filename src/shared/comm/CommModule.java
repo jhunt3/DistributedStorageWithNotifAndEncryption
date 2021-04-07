@@ -33,7 +33,7 @@ public class CommModule implements ICommModule, Runnable {
     private KVServer server;
     private boolean isOpen;
     private int secretInt; // x or y in g^(xy) mod p for Diffie-Hellman key exchange
-    private int key; // encryption key
+    private byte[] key; // encryption key
     private int g = 2; // generator number
     private BigInteger p = new BigInteger("FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD1" +
                                             "29024E088A67CC74020BBEA63B139B22514A08798E3404DD" +
@@ -444,7 +444,7 @@ public class CommModule implements ICommModule, Runnable {
     public void setKey(BigInteger secret) {
         BigInteger sharedSecret = fastModExp(secret, this.secretInt, this.p); // S = Q^x mod(p) = P^y mod(p) = g^(xy) mod(p)
 
-        // Get key SHA-256 hash value as an integer (key)
+        // Get key SHA-256 hash value (lowest 7 bytes -> 56 bits)
         MessageDigest sha256 = null;
         try {
             sha256 = MessageDigest.getInstance("SHA-256");
@@ -454,8 +454,8 @@ public class CommModule implements ICommModule, Runnable {
         sha256.update(sharedSecret.toByteArray());
         byte[] digest = sha256.digest();
 
-        this.key = ByteBuffer.wrap(Arrays.copyOfRange(digest, 0, 4)).getInt(); // Get lowest 4 bytes of hash: key
-	    logger.debug("Key is: " + String.valueOf(key));
+        this.key = Arrays.copyOfRange(digest, 0, 7); // Get lowest 7 bytes of hash: key
+	    logger.debug("Key is: " + Arrays.toString(this.key));
     }
 
     private BigInteger fastModExp(BigInteger G, int x, BigInteger p) { // Compute g^x mod(p) fast using exp by squaring
