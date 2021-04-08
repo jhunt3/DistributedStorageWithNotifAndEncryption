@@ -679,7 +679,7 @@ public class AdditionalTest extends TestCase {
 	@Test
 	public void testFastModExp() {
 
-		BigInteger G = BigInteger.TWO;
+		BigInteger G = new BigInteger("2");
 		int x = 20;
 		BigInteger p = new BigInteger("1000000");
 
@@ -698,7 +698,7 @@ public class AdditionalTest extends TestCase {
 
 		int i = 0;
 
-		BigInteger G = BigInteger.TWO;
+		BigInteger G = new BigInteger("2");
 		int x = 65535;
 		BigInteger p = new BigInteger("FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD1" +
                                             "29024E088A67CC74020BBEA63B139B22514A08798E3404DD" +
