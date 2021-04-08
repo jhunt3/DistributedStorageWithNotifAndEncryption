@@ -650,6 +650,8 @@ public class AdditionalTest extends TestCase {
 		KVServer server = new KVServer(port_no, 100, "FIFO", "testServer");
 	        server.start();
 
+		Thread.sleep(1000);
+
 		// Initialize sockets
 		Socket clientSocket = null;
 		CommModule clientComm = null;
