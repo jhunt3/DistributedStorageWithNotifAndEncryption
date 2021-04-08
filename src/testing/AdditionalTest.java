@@ -22,6 +22,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.Random;
+import javax.jms.*;
+import org.apache.activemq.ActiveMQConnectionFactory;
 
 import static shared.messages.KVMessage.StatusType.*;
 
@@ -728,7 +730,4 @@ public class AdditionalTest extends TestCase {
 
 		assertTrue(fastTimeMs < stdTimeMs);
 	}
-
-	@Test
-	public void test
 }
