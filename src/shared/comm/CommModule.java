@@ -1,11 +1,15 @@
 package shared.comm;
 
 import app_kvServer.KVServer;
+import org.apache.commons.lang.SerializationUtils;
 import org.apache.log4j.Logger;
+import shared.messages.HMessage;
 import shared.messages.KVAdminMsg;
 import shared.messages.KVMessage;
 import shared.messages.KVMsg;
 
+import javax.crypto.*;
+import javax.crypto.spec.SecretKeySpec;
 import javax.swing.*;
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -14,8 +18,10 @@ import java.math.BigInteger;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.security.InvalidKeyException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.SignatureException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Random;
@@ -24,7 +30,6 @@ import static shared.messages.KVMessage.StatusType;
 import static shared.messages.KVMessage.StatusType.*;
 
 // Milestone 4 (Security)
-import javax.crypto.Cipher;
 
 
 public class CommModule implements ICommModule, Runnable {
@@ -47,6 +52,13 @@ public class CommModule implements ICommModule, Runnable {
                                             "C2007CB8A163BF0598DA48361C55D39A69163FA8FD24CF5F" +
                                             "83655D23DCA3AD961C62F356208552BB9ED529077096966D" +
                                             "670C354E4ABC9804F1746C08CA237327FFFFFFFFFFFFFFFF", 16);
+    private Cipher enCipher;
+    private Cipher deCipher;
+    private SecretKey secretKey;
+    private CipherOutputStream cipherOutputStream;
+    private CipherInputStream cipherInputStream;
+    private ObjectOutputStream cipherOutput;
+    private ObjectInputStream cipherInput;
 
     /**
      * @param socket Client Socket (output of socket.accept() for the server, socket for the client), or ECS Socket.
@@ -93,6 +105,34 @@ public class CommModule implements ICommModule, Runnable {
         }
         this.setKey(receivedSecret);
 
+        // set up security
+        if (this.key != null) {
+            try {
+                this.enCipher = Cipher.getInstance("DES");
+                this.deCipher = Cipher.getInstance("DES");
+                this.secretKey = new SecretKeySpec(this.key, "DES");
+                this.enCipher.init(Cipher.ENCRYPT_MODE, this.secretKey);
+                this.deCipher.init(Cipher.DECRYPT_MODE, this.secretKey);
+//            this.cipherInputStream = new CipherInputStream(this.socket.getInputStream(), this.enCipher);
+//            this.cipherOutputStream = new CipherOutputStream(this.socket.getOutputStream(), this.deCipher);
+//            this.cipherInput = new ObjectInputStream(this.cipherInputStream);
+//            this.cipherOutput = new ObjectOutputStream(this.cipherOutputStream);
+
+            } catch (NoSuchAlgorithmException e) {
+                logger.error("No Such Algorithm:" + e.getMessage());
+            }
+            catch (NoSuchPaddingException e) {
+                logger.error("No Such Padding:" + e.getMessage());
+            }
+            catch (InvalidKeyException e) {
+                logger.error("Invalid Key:" + e.getMessage());
+            }
+//        catch (IOException ioe) {
+//            logger.error("Error! Could not get streams ", ioe);
+//        }
+        } else {
+            logger.error("No shared key found!");
+        }
     }
 
     /**
@@ -109,7 +149,7 @@ public class CommModule implements ICommModule, Runnable {
                     KVMessage msg = receiveMsg();
                     if (msg.isAdminMessage()){
                         try {
-                            System.out.println("received adminmsg");
+                            System.out.println("received adminMsg");
                             KVAdminMsg in_msg = (KVAdminMsg) msg;
                             KVAdminMsg out_msg = adminServe(in_msg);
                             sendAdminMsg(null, out_msg.getStatus(), null, null);
@@ -152,9 +192,17 @@ public class CommModule implements ICommModule, Runnable {
     @Override
     public KVMessage receiveMsg() throws IOException{
         KVMessage msg = null;
+        HMessage hMsg;
 
         try {
-            msg = (KVMessage) this.input.readObject();
+            hMsg = (HMessage) this.input.readObject();
+            byte[] encodedKvMessage = hMsg.getMessage();
+            // check if same hash
+            if (!Arrays.equals(hMsg.getHmac(), calculateHMAC(encodedKvMessage, this.key))){
+                logger.error("HMACs do not match! Message has been compromised");
+            }
+            byte[] serializedKvMessage = this.deCipher.doFinal(encodedKvMessage);
+            msg = (KVMessage) SerializationUtils.deserialize(serializedKvMessage);
         } catch (Exception e) {
             logger.error("No message.");
         }
@@ -187,14 +235,51 @@ public class CommModule implements ICommModule, Runnable {
      * @throws IOException
      */
     @Override
-    public void sendMsg(StatusType status, String key, String value, HashMap<String,String> metadata) throws IOException {
-        KVMsg msg = new KVMsg(status, key, value, metadata);
+    public void sendMsg(StatusType status, String key, String value, HashMap<String,String> metadata) throws IOException, BadPaddingException, IllegalBlockSizeException, InvalidKeyException, NoSuchAlgorithmException {
+        KVMsg kvMsg = new KVMsg(status, key, value, metadata);
+        byte[] serializedMsg = SerializationUtils.serialize(kvMsg);
+        byte[] encryptedMsg = this.enCipher.doFinal(serializedMsg);
+        byte[] hmac = calculateHMAC(encryptedMsg, this.key);
+        HMessage msg = new HMessage(encryptedMsg, hmac);
+
         this.output.writeObject(msg);
         this.output.flush();
         if (this.server != null) {
-            logger.info("Message sent by server ->" + " Status: " + msg.getStatus() + " Key: " + msg.getKey() + " Value: " + msg.getValue());
+            logger.info("Message sent by server ->" + " Status: " + kvMsg.getStatus() + " Key: " + kvMsg.getKey() + " Value: " + kvMsg.getValue());
         } else {
-            logger.info("Message sent by client ->" + " Status: " + msg.getStatus() + " Key: " + msg.getKey() + " Value: " + msg.getValue());
+            logger.info("Message sent by client ->" + " Status: " + kvMsg.getStatus() + " Key: " + kvMsg.getKey() + " Value: " + kvMsg.getValue());
+        }
+    }
+
+    public void sendAdminMsg(String kvServer, StatusType status, HashMap<String,String> metadata, String range) {
+        // send admin msg to ECS or server
+        KVAdminMsg adminMsg = new KVAdminMsg(kvServer, status, metadata, range);
+        HMessage msg = null;
+        try{
+            byte[] serializedMsg = SerializationUtils.serialize(adminMsg);
+            byte[] encryptedMsg = this.enCipher.doFinal(serializedMsg);
+            byte[] hmac = calculateHMAC(encryptedMsg, this.key);
+            msg = new HMessage(encryptedMsg, hmac);
+        } catch (NoSuchAlgorithmException e) {
+            logger.error("No Such Algorithm:" + e.getMessage());
+        } catch (InvalidKeyException e) {
+            logger.error("Invalid Key:" + e.getMessage());
+        } catch (BadPaddingException e) {
+            logger.error("No Such Padding:" + e.getMessage());
+        } catch (IllegalBlockSizeException e) {
+            e.printStackTrace();
+        }
+
+        try {
+            this.output.writeObject(msg);
+            this.output.flush();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        if (this.server != null){
+            logger.info("Message sent by server -> " + "Status: " + adminMsg.getStatus());
+        } else {
+            logger.info("Message sent by ECS -> " + "Status: " + adminMsg.getStatus());
         }
     }
 
@@ -293,22 +378,6 @@ public class CommModule implements ICommModule, Runnable {
             return new KVMsg(out_status, key, out_value);
         } else { // msg == null
             return null;
-        }
-    }
-
-    public void sendAdminMsg(String kvServer, StatusType status, HashMap<String,String> metadata, String range) {
-        // send admin msg to ECS or server
-        KVAdminMsg adminMsg = new KVAdminMsg(kvServer, status, metadata, range);
-        try {
-            this.output.writeObject(adminMsg);
-            this.output.flush();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        if (this.server != null){
-            logger.info("Message sent by server -> " + "Status: " + adminMsg.getStatus());
-        } else {
-            logger.info("Message sent by ECS -> " + "Status: " + adminMsg.getStatus());
         }
     }
 
@@ -458,7 +527,7 @@ public class CommModule implements ICommModule, Runnable {
         sha256.update(sharedSecret.toByteArray());
         byte[] digest = sha256.digest();
 
-        this.key = Arrays.copyOfRange(digest, 0, 7); // Get lowest 7 bytes of hash: key
+        this.key = Arrays.copyOfRange(digest, 0, 8); // Get lowest 7 bytes of hash: key
 	    logger.debug("Key is: " + Arrays.toString(this.key));
     }
 
@@ -482,6 +551,14 @@ public class CommModule implements ICommModule, Runnable {
         }
 
         return G.multiply(Y).mod(p);
+    }
+    public static byte[] calculateHMAC(byte[] data, byte[] key)
+            throws NoSuchAlgorithmException, InvalidKeyException
+    {
+        SecretKeySpec secretKeySpec = new SecretKeySpec(key, "HmacSHA256");
+        Mac mac = Mac.getInstance("HmacSHA256");
+        mac.init(secretKeySpec);
+        return mac.doFinal(data);
     }
 
 }
