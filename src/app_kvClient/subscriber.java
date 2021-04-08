@@ -29,7 +29,7 @@ public class subscriber implements Runnable{
     public void run(){
 
         try {
-            logger.error("Starting sub");
+            //logger.error("Starting sub");
             ActiveMQConnectionFactory connectionFactory = new ActiveMQConnectionFactory("tcp://localhost:61616");
             Connection connection = connectionFactory.createConnection();
             connection.start();

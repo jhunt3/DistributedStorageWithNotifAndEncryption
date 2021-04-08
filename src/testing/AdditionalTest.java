@@ -558,53 +558,53 @@ public class AdditionalTest extends TestCase {
 
 	}
 
-	public void testMoveData() throws Exception {
-		String response;
-
-		System.out.println("Adding 2 nodes");
-		response=ecsClient.handleCommand("addNodes 2");
-		System.out.println("Response to adding nodes: "+ response);
-		String[] addrs = response.split(" ");
-		String[] hosts=new String[3];
-		int[] ports=new int[3];
-		String[] names=new String[3];
-		String name="";
-		for (int i = 1;i<addrs.length;i++) {
-			hosts[i]=addrs[i].split(":")[0];
-			ports[i]=Integer.parseInt(addrs[i].split(":")[1]);
-			names[i]=addrs[i].split(":")[2];
-		}
-
-		System.out.println("Connecting to one of servers");
-		kvClient.handleCommand("connect "+ hosts[1] + " "+ ports[1]);
-		kvClient.handleCommand("put k1 v1");
-		kvClient.handleCommand("put k2 v2");
-		kvClient.handleCommand("put k3 v3");
-		kvClient.handleCommand("put k4 v4");
-
-		System.out.println("Removing Node");
-        response = ecsClient.handleCommand("removeNode " + name);
-        System.out.println("Remove node response: " + response);
-
-		assertEquals(kvClient.handleCommand("get k1"), "v1");
-		assertEquals(kvClient.handleCommand("get k2"), "v2");
-		assertEquals(kvClient.handleCommand("get k3"), "v3");
-		assertEquals(kvClient.handleCommand("get k4"), "v4");
-
-		kvClient.handleCommand("put k1");
-		kvClient.handleCommand("put k2");
-		kvClient.handleCommand("put k3");
-		kvClient.handleCommand("put k4");
-
-		System.out.println("Shutting Down");
-		ecsClient.handleCommand("shutDown");
-		int activeServers= ecsClient.activeServers.size();
-		assertEquals(0,activeServers);
-	}
-
-	public void testFlushData() throws Exception {
-
-//        int port = 60000;
+//	public void testMoveData() throws Exception {
+//		String response;
+//
+//		System.out.println("Adding 2 nodes");
+//		response=ecsClient.handleCommand("addNodes 2");
+//		System.out.println("Response to adding nodes: "+ response);
+//		String[] addrs = response.split(" ");
+//		String[] hosts=new String[3];
+//		int[] ports=new int[3];
+//		String[] names=new String[3];
+//		String name="";
+//		for (int i = 1;i<addrs.length;i++) {
+//			hosts[i]=addrs[i].split(":")[0];
+//			ports[i]=Integer.parseInt(addrs[i].split(":")[1]);
+//			names[i]=addrs[i].split(":")[2];
+//		}
+//
+//		System.out.println("Connecting to one of servers");
+//		kvClient.handleCommand("connect "+ hosts[1] + " "+ ports[1]);
+//		kvClient.handleCommand("put k1 v1");
+//		kvClient.handleCommand("put k2 v2");
+//		kvClient.handleCommand("put k3 v3");
+//		kvClient.handleCommand("put k4 v4");
+//
+//		System.out.println("Removing Node");
+//        response = ecsClient.handleCommand("removeNode " + name);
+//        System.out.println("Remove node response: " + response);
+//
+//		assertEquals(kvClient.handleCommand("get k1"), "v1");
+//		assertEquals(kvClient.handleCommand("get k2"), "v2");
+//		assertEquals(kvClient.handleCommand("get k3"), "v3");
+//		assertEquals(kvClient.handleCommand("get k4"), "v4");
+//
+//		kvClient.handleCommand("put k1");
+//		kvClient.handleCommand("put k2");
+//		kvClient.handleCommand("put k3");
+//		kvClient.handleCommand("put k4");
+//
+//		System.out.println("Shutting Down");
+//		ecsClient.handleCommand("shutDown");
+//		int activeServers= ecsClient.activeServers.size();
+//		assertEquals(0,activeServers);
+//	}
+//
+//	public void testFlushData() throws Exception {
+//
+////        int port = 60000;
 //        int cachSize = 100;
 //        String serverName = "testServer";
 //
@@ -626,10 +626,10 @@ public class AdditionalTest extends TestCase {
 //        ecsClient.handleCommand("shutDown");
 //        int activeServers= ecsClient.activeServers.size();
 //        assertEquals(0,activeServers);
-		assertTrue(true);
-	}
-
-	public void testWriteLock(){
-		assertTrue(true);
-	}
+//		assertTrue(true);
+//	}
+//
+//	public void testWriteLock(){
+//		assertTrue(true);
+//	}
 }
