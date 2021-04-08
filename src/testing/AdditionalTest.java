@@ -14,7 +14,10 @@ import shared.messages.KVMsg;
 import storage.KVStorage;
 
 import java.io.IOException;
+import java.math.BigInteger;
+import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.Arrays;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -280,9 +283,9 @@ public class AdditionalTest extends TestCase {
 //	}
 
 
-//Milestone 2
+	//Milestone 2
 
-	@Test
+	/*@Test
 	public void testShutDown() throws Exception {
 		String response;
 
@@ -631,5 +634,89 @@ public class AdditionalTest extends TestCase {
 
 	public void testWriteLock(){
 		assertTrue(true);
+	}*/
+
+	// MILESTONE 4 TESTS
+
+	@Test
+	public void testDHKE() throws Exception {
+
+			// Confirm DHKE is working properly
+
+			int port_no = 60000;
+
+			// Initialize sockets
+			Socket clientSocket = null;
+			ServerSocket serverSocket = null;
+			CommModule clientComm = null;
+			CommModule serverComm = null;
+			try {
+				clientSocket = new Socket("localhost", port_no);
+				clientComm = new CommModule(clientSocket, null);
+				serverSocket = new ServerSocket(port_no);
+				Socket client = serverSocket.accept();
+				serverComm =
+						new CommModule(client, null);
+			} catch (IOException e) {
+				System.out.println("Error! Cannot open socket: " + e);
+			}
+
+			// Look at CommModule's keys
+			byte[] clientKey = clientComm.key;
+			byte[] serverKey = serverComm.key;
+
+			System.out.println("Key is: " + Arrays.toString(clientKey));
+			System.out.println("Key is: " + Arrays.toString(serverKey));
+
+			clientSocket.close();
+			serverSocket.close();
+
+			clientComm.closeConnection();
+			serverComm.closeConnection();
+
+			assertTrue(Arrays.equals(clientKey,serverKey));
 	}
+
+	@Test
+	public void testFastModExp() {
+
+		BigInteger G = BigInteger.TWO;
+		int x = 20;
+		BigInteger p = new BigInteger("1000000");
+
+		BigInteger fmeVal = CommModule.fastModExp(G, x, p); // Compute g^x mod p with fast mod exp
+
+		BigInteger goldenVal = G.pow(x).mod(p); // Compute g^x mod p with java BigInteger method
+
+		System.out.println("Fast mod exp val: " + fmeVal.toString());
+		System.out.println("Golden val: " + goldenVal.toString());
+
+		assertEquals(fmeVal.compareTo(goldenVal), 0);
+	}
+
+	@Test
+	public void testFastModExpSpeed() {
+
+		BigInteger G = BigInteger.TWO;
+		int x = 20;
+		BigInteger p = new BigInteger("1000000");
+
+		long startTimeFast = System.nanoTime();
+		BigInteger fmeVal = CommModule.fastModExp(G, x, p); // Compute g^x mod p with fast mod exp
+		long endTimeFast = System.nanoTime();
+
+		long fastTimeMs = (endTimeFast-startTimeFast) / (long) 1000000;
+
+		long startTimeStd = System.nanoTime();
+		BigInteger goldenVal = G.pow(x).mod(p); // Compute g^x mod p with java BigInteger method
+		long endTimeStd = System.nanoTime();
+
+		long stdTimeMs = (endTimeStd-startTimeStd) / (long) 1000000;
+
+		System.out.println("Fast mod exp time (ms): " + String.valueOf(fastTimeMs));
+		System.out.println("Std mod exp time (ms): " + String.valueOf(stdTimeMs));
+
+		assertTrue(fastTimeMs < stdTimeMs);
+	}
+
 }
