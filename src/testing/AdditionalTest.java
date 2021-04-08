@@ -4,6 +4,7 @@ import app_kvClient.KVClient;
 import app_kvECS.ECSClient;
 import app_kvServer.KVServer;
 import client.KVStore;
+import org.apache.commons.lang.SerializationUtils;
 import org.junit.Test;
 import ecs.IECSNode;
 import ecs.ECSNode;
@@ -17,11 +18,18 @@ import java.io.IOException;
 import java.math.BigInteger;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
+import java.util.Formatter;
+import java.util.HashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.Random;
+import javax.crypto.*;
+import javax.crypto.spec.SecretKeySpec;
 import javax.jms.*;
 import org.apache.activemq.ActiveMQConnectionFactory;
 
@@ -43,8 +51,9 @@ public class AdditionalTest extends TestCase {
 //		}
 	}
 
-//	public void tearDown() {
-//		kvStore.disconnect();
+//	public void tearDown() throws IOException {
+//		ecsClient.shutdown();
+//		kvClient = null;
 //	}
 
 	/**
@@ -642,98 +651,49 @@ public class AdditionalTest extends TestCase {
 
 	// MILESTONE 4 TESTS
 
-	@Test
-	public void testDHKE() throws Exception {
 
-		// Confirm DHKE is working properly
 
-		int port_no = 50010;
-
-		KVServer server = new KVServer(port_no, 100, "FIFO", "testServer");
-		server.start();
-
-		Thread.sleep(1000);
-
-		// Initialize sockets
-		Socket clientSocket = null;
-		CommModule clientComm = null;
-		try {
-			clientSocket = new Socket("localhost", port_no);
-			clientComm = new CommModule(clientSocket, null);
-		} catch (IOException e) {
-			System.out.println("Error! Cannot open socket: " + e);
-		}
-
-		// Look at CommModule's keys
-		byte[] clientKey = null;
-		clientKey = clientComm.key;
-
-		System.out.println("Key is: " + Arrays.toString(clientKey));
-		//server.shutDown();
-		//ecsClient.handleCommand("shutDown");
-		clientSocket.close();
-		clientComm.closeConnection();
-
-		assertNotNull(clientKey);
-	}
-
-	@Test
-	public void testFastModExp() {
-
-		BigInteger G = new BigInteger("2");
-		int x = 20;
-		BigInteger p = new BigInteger("1000000");
-
-		BigInteger fmeVal = CommModule.fastModExp(G, x, p); // Compute g^x mod p with fast mod exp
-
-		BigInteger goldenVal = G.pow(x).mod(p); // Compute g^x mod p with java BigInteger method
-
-		System.out.println("Fast mod exp val: " + fmeVal.toString());
-		System.out.println("Golden val: " + goldenVal.toString());
-
-		assertEquals(fmeVal.compareTo(goldenVal), 0);
-	}
+//	@Test
+//	public void testPublishing() throws Exception {
+//
+//		String response;
+//		response=ecsClient.handleCommand("addNode");
+//		System.out.println(response);
+//		String[] addrs = response.split(" ");
+//		String addrprt=addrs[4];
+//		String addr=addrprt.split(":")[0];
+//		int prt = Integer.parseInt(addrprt.split(":")[1]);
+//		kvClient.handleCommand("connect localhost "+String.valueOf(prt));
+//		ActiveMQConnectionFactory connectionFactory = null;
+//		MessageConsumer consumer;
+//		Connection connection;
+//		Session session;
+//		connectionFactory = new ActiveMQConnectionFactory("tcp://localhost:61616");
+//		try {
+//			connection = connectionFactory.createConnection();
+//			connection.start();
+//			session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+//
+//			Destination destination = session.createTopic("Changes");
+//
+//			consumer = session.createConsumer(destination);
+//			kvClient.handleCommand("put 1 1");
+//			Message message = consumer.receive();
+//			TextMessage textmessage = (TextMessage) message;
+//
+//			System.out.println(textmessage.getText());
+//			assertEquals("KV change --> 1:1",textmessage.getText());
+//			session.close();
+//			connection.close();
+//		}catch(JMSException e){
+//			e.printStackTrace();
+//		}
+//		ecsClient.handleCommand("shutDown");
+//
+//	}
 
 	@Test
-	public void testFastModExpSpeed() {
 
-		int i = 0;
-
-		BigInteger G = new BigInteger("2");
-		int x = 65535;
-		BigInteger p = new BigInteger("FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD1" +
-                                            "29024E088A67CC74020BBEA63B139B22514A08798E3404DD" +
-                                            "EF9519B3CD3A431B302B0A6DF25F14374FE1356D6D51C245" +
-                                            "E485B576625E7EC6F44C42E9A637ED6B0BFF5CB6F406B7ED" +
-                                            "EE386BFB5A899FA5AE9F24117C4B1FE649286651ECE45B3D" +
-                                            "C2007CB8A163BF0598DA48361C55D39A69163FA8FD24CF5F" +
-                                            "83655D23DCA3AD961C62F356208552BB9ED529077096966D" +
-                                            "670C354E4ABC9804F1746C08CA237327FFFFFFFFFFFFFFFF", 16);
-
-		long startTimeStd = System.nanoTime();
-		for (i=0; i<1000; i++){
-			BigInteger goldenVal = G.pow(x).mod(p); // Compute g^x mod p with java BigInteger method
-		}
-		long endTimeStd = System.nanoTime();
-
-		long stdTimeMs = (endTimeStd-startTimeStd);
-
-		long startTimeFast = System.nanoTime();
-		for (i=0; i<1000; i++) {
-			BigInteger fmeVal = CommModule.fastModExp(G, x, p); // Compute g^x mod p with fast mod exp
-		}
-		long endTimeFast = System.nanoTime();
-
-		long fastTimeMs = (endTimeFast-startTimeFast);
-
-		System.out.println("Fast mod exp time (ns): " + String.valueOf(fastTimeMs));
-		System.out.println("Std mod exp time (ns): " + String.valueOf(stdTimeMs));
-
-		assertTrue(fastTimeMs < stdTimeMs);
-	}
-
-
-	@Test
 	public void testPutPublishing() throws Exception {
 		ecsClient.handleCommand("addNode");
 		ecsClient.handleCommand("shutDown");
@@ -823,13 +783,13 @@ public class AdditionalTest extends TestCase {
 	public void testUpdatePublishing() throws Exception {
 
 		String response;
-		response=ecsClient.handleCommand("addNode");
+		response = ecsClient.handleCommand("addNode");
 		System.out.println(response);
 		String[] addrs = response.split(" ");
-		String addrprt=addrs[4];
-		String addr=addrprt.split(":")[0];
+		String addrprt = addrs[4];
+		String addr = addrprt.split(":")[0];
 		int prt = Integer.parseInt(addrprt.split(":")[1]);
-		kvClient.handleCommand("connect localhost "+String.valueOf(prt));
+		kvClient.handleCommand("connect localhost " + String.valueOf(prt));
 		ActiveMQConnectionFactory connectionFactory = null;
 		MessageConsumer consumer;
 		Connection connection;
@@ -848,25 +808,24 @@ public class AdditionalTest extends TestCase {
 			TextMessage textmessage = (TextMessage) message;
 
 			System.out.println(textmessage.getText());
-			assertEquals("Put --> 1:1",textmessage.getText());
+			assertEquals("Put --> 1:1", textmessage.getText());
 
 			kvClient.handleCommand("put 1 2");
 			message = consumer.receive();
 			textmessage = (TextMessage) message;
 
 			System.out.println(textmessage.getText());
-			assertEquals("Update --> 1:2",textmessage.getText());
+			assertEquals("Update --> 1:2", textmessage.getText());
 
 			session.close();
 			connection.close();
-		}catch(JMSException e){
+		} catch (JMSException e) {
 			e.printStackTrace();
 		}
-		ecsClient.handleCommand("shutDown");
-
 	}
 	@Test
 	public void testMultiNodePublishing() throws Exception {
+
 
 		String response;
 		response=ecsClient.handleCommand("addNodes 8");
@@ -928,6 +887,161 @@ public class AdditionalTest extends TestCase {
 		}
 		ecsClient.handleCommand("shutDown");
 
+	}
+
+	@Test
+	public void testObjectSerialization(){
+		String key = "key";
+		String value = "value";
+		HashMap<String, String> metadata = new HashMap<>();
+		metadata.put("SampleKey", "SampleValue");
+		KVMsg kvMsg = new KVMsg(START, key, value, metadata);
+		byte[] serializedMsg = SerializationUtils.serialize(kvMsg);
+		KVMsg deserialized = (KVMsg) SerializationUtils.deserialize(serializedMsg);
+		assertEquals(kvMsg.getKey(), deserialized.getKey());
+		assertEquals(kvMsg.getStatus(), deserialized.getStatus());
+		assertEquals(kvMsg.getValue(), deserialized.getValue());
+		assertEquals(kvMsg.getMetadata(), deserialized.getMetadata());
+	}
+	@Test
+	public static String calculateHMAC(byte[] data, byte[] key)
+			throws NoSuchAlgorithmException, InvalidKeyException
+	{
+		SecretKeySpec secretKeySpec = new SecretKeySpec(key, "HmacSHA256");
+		Mac mac = Mac.getInstance("HmacSHA256");
+		mac.init(secretKeySpec);
+		return toHexString(mac.doFinal(data));
+	}
+	@Test
+	private static String toHexString(byte[] bytes) {
+		Formatter formatter = new Formatter();
+		for (byte b : bytes) {
+			formatter.format("%02x", b);
+
+		}
+		return formatter.toString();
+	}
+
+
+	@Test
+	public void testCalculateHmac() throws InvalidKeyException, NoSuchAlgorithmException {
+		String message = "message";
+		String secretKey = "shhh_secret_key";
+		String hmac = calculateHMAC(message.getBytes(), secretKey.getBytes());
+		assertEquals(hmac, "ff3135ed2c609ebb97dbb6118a6ac62bdd1aad22fe9209788409016d555fce89");
+	}
+
+	@Test
+	public void testEncryptDecryptSerializedObject() throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException {
+		Cipher enCipher = Cipher.getInstance("DES");
+		Cipher deCipher = Cipher.getInstance("DES");
+		SecretKey secretKey = KeyGenerator.getInstance("DES").generateKey();
+		enCipher.init(Cipher.ENCRYPT_MODE, secretKey);
+		deCipher.init(Cipher.DECRYPT_MODE, secretKey);
+
+		String key = "key";
+		String value = "value";
+		HashMap<String, String> metadata = new HashMap<>();
+		metadata.put("SampleKey", "SampleValue");
+		KVMsg kvMsg = new KVMsg(START, key, value, metadata);
+		byte[] serializedMsg = SerializationUtils.serialize(kvMsg);
+		byte[] encryptedMsg = enCipher.doFinal(serializedMsg);
+		assertNotSame(serializedMsg, encryptedMsg);
+		byte[] decryptedMsg = deCipher.doFinal(encryptedMsg);
+		KVMsg deserialized = (KVMsg) SerializationUtils.deserialize(decryptedMsg);
+		assertEquals(deserialized.getKey(), kvMsg.getKey());
+		assertEquals(kvMsg.getStatus(), deserialized.getStatus());
+		assertEquals(kvMsg.getValue(), deserialized.getValue());
+		assertEquals(kvMsg.getMetadata(), deserialized.getMetadata());
+	}
+	@Test
+	public void testDHKE() throws Exception {
+
+		// Confirm DHKE is working properly
+
+		int port_no = 50010;
+
+		KVServer server = new KVServer(port_no, 100, "FIFO", "testServer");
+		server.start();
+
+		Thread.sleep(1000);
+
+		// Initialize sockets
+		Socket clientSocket = null;
+		CommModule clientComm = null;
+		try {
+			clientSocket = new Socket("localhost", port_no);
+			clientComm = new CommModule(clientSocket, null);
+		} catch (IOException e) {
+			System.out.println("Error! Cannot open socket: " + e);
+		}
+
+		// Look at CommModule's keys
+		byte[] clientKey = null;
+		clientKey = clientComm.key;
+
+		System.out.println("Key is: " + Arrays.toString(clientKey));
+		//server.shutDown();
+		//ecsClient.handleCommand("shutDown");
+		clientSocket.close();
+		clientComm.closeConnection();
+
+		assertNotNull(clientKey);
+	}
+
+	@Test
+	public void testFastModExp() {
+
+		BigInteger G = new BigInteger("2");
+		int x = 20;
+		BigInteger p = new BigInteger("1000000");
+
+		BigInteger fmeVal = CommModule.fastModExp(G, x, p); // Compute g^x mod p with fast mod exp
+
+		BigInteger goldenVal = G.pow(x).mod(p); // Compute g^x mod p with java BigInteger method
+
+		System.out.println("Fast mod exp val: " + fmeVal.toString());
+		System.out.println("Golden val: " + goldenVal.toString());
+
+		assertEquals(fmeVal.compareTo(goldenVal), 0);
+	}
+
+	@Test
+	public void testFastModExpSpeed() {
+
+		int i = 0;
+
+		BigInteger G = new BigInteger("2");
+		int x = 65535;
+		BigInteger p = new BigInteger("FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD1" +
+				"29024E088A67CC74020BBEA63B139B22514A08798E3404DD" +
+				"EF9519B3CD3A431B302B0A6DF25F14374FE1356D6D51C245" +
+				"E485B576625E7EC6F44C42E9A637ED6B0BFF5CB6F406B7ED" +
+				"EE386BFB5A899FA5AE9F24117C4B1FE649286651ECE45B3D" +
+				"C2007CB8A163BF0598DA48361C55D39A69163FA8FD24CF5F" +
+				"83655D23DCA3AD961C62F356208552BB9ED529077096966D" +
+				"670C354E4ABC9804F1746C08CA237327FFFFFFFFFFFFFFFF", 16);
+
+		long startTimeStd = System.nanoTime();
+		for (i=0; i<1000; i++){
+			BigInteger goldenVal = G.pow(x).mod(p); // Compute g^x mod p with java BigInteger method
+		}
+		long endTimeStd = System.nanoTime();
+
+		long stdTimeMs = (endTimeStd-startTimeStd);
+
+		long startTimeFast = System.nanoTime();
+		for (i=0; i<1000; i++) {
+			BigInteger fmeVal = CommModule.fastModExp(G, x, p); // Compute g^x mod p with fast mod exp
+		}
+		long endTimeFast = System.nanoTime();
+
+		long fastTimeMs = (endTimeFast-startTimeFast);
+
+		System.out.println("Fast mod exp time (ns): " + String.valueOf(fastTimeMs));
+		System.out.println("Std mod exp time (ns): " + String.valueOf(stdTimeMs));
+
+		assertTrue(fastTimeMs < stdTimeMs);
 	}
 
 }

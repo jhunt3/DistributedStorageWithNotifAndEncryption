@@ -55,10 +55,6 @@ public class CommModule implements ICommModule, Runnable {
     private Cipher enCipher;
     private Cipher deCipher;
     private SecretKey secretKey;
-    private CipherOutputStream cipherOutputStream;
-    private CipherInputStream cipherInputStream;
-    private ObjectOutputStream cipherOutput;
-    private ObjectInputStream cipherInput;
 
     /**
      * @param socket Client Socket (output of socket.accept() for the server, socket for the client), or ECS Socket.
@@ -195,6 +191,7 @@ public class CommModule implements ICommModule, Runnable {
         HMessage hMsg;
 
         try {
+            logger.info("Reading object...");
             hMsg = (HMessage) this.input.readObject();
             byte[] encodedKvMessage = hMsg.getMessage();
             // check if same hash
@@ -271,7 +268,8 @@ public class CommModule implements ICommModule, Runnable {
             e.printStackTrace();
         }
         logger.info("HMessage: ");
-        logger.info(msg.toString());
+        logger.info(msg.getMessage().toString());
+        logger.info(msg.getHmac().toString());
         try {
             this.output.writeObject(msg);
             this.output.flush();
