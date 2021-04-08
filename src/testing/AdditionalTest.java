@@ -14,10 +14,14 @@ import shared.messages.KVMsg;
 import storage.KVStorage;
 
 import java.io.IOException;
+import java.math.BigInteger;
+import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.Arrays;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.Random;
 
 import static shared.messages.KVMessage.StatusType.*;
 
@@ -280,9 +284,9 @@ public class AdditionalTest extends TestCase {
 //	}
 
 
-//Milestone 2
+	//Milestone 2
 
-	@Test
+	/*@Test
 	public void testShutDown() throws Exception {
 		String response;
 
@@ -558,53 +562,53 @@ public class AdditionalTest extends TestCase {
 
 	}
 
-	public void testMoveData() throws Exception {
-		String response;
-
-		System.out.println("Adding 2 nodes");
-		response=ecsClient.handleCommand("addNodes 2");
-		System.out.println("Response to adding nodes: "+ response);
-		String[] addrs = response.split(" ");
-		String[] hosts=new String[3];
-		int[] ports=new int[3];
-		String[] names=new String[3];
-		String name="";
-		for (int i = 1;i<addrs.length;i++) {
-			hosts[i]=addrs[i].split(":")[0];
-			ports[i]=Integer.parseInt(addrs[i].split(":")[1]);
-			names[i]=addrs[i].split(":")[2];
-		}
-
-		System.out.println("Connecting to one of servers");
-		kvClient.handleCommand("connect "+ hosts[1] + " "+ ports[1]);
-		kvClient.handleCommand("put k1 v1");
-		kvClient.handleCommand("put k2 v2");
-		kvClient.handleCommand("put k3 v3");
-		kvClient.handleCommand("put k4 v4");
-
-		System.out.println("Removing Node");
-        response = ecsClient.handleCommand("removeNode " + name);
-        System.out.println("Remove node response: " + response);
-
-		assertEquals(kvClient.handleCommand("get k1"), "v1");
-		assertEquals(kvClient.handleCommand("get k2"), "v2");
-		assertEquals(kvClient.handleCommand("get k3"), "v3");
-		assertEquals(kvClient.handleCommand("get k4"), "v4");
-
-		kvClient.handleCommand("put k1");
-		kvClient.handleCommand("put k2");
-		kvClient.handleCommand("put k3");
-		kvClient.handleCommand("put k4");
-
-		System.out.println("Shutting Down");
-		ecsClient.handleCommand("shutDown");
-		int activeServers= ecsClient.activeServers.size();
-		assertEquals(0,activeServers);
-	}
-
-	public void testFlushData() throws Exception {
-
-//        int port = 60000;
+//	public void testMoveData() throws Exception {
+//		String response;
+//
+//		System.out.println("Adding 2 nodes");
+//		response=ecsClient.handleCommand("addNodes 2");
+//		System.out.println("Response to adding nodes: "+ response);
+//		String[] addrs = response.split(" ");
+//		String[] hosts=new String[3];
+//		int[] ports=new int[3];
+//		String[] names=new String[3];
+//		String name="";
+//		for (int i = 1;i<addrs.length;i++) {
+//			hosts[i]=addrs[i].split(":")[0];
+//			ports[i]=Integer.parseInt(addrs[i].split(":")[1]);
+//			names[i]=addrs[i].split(":")[2];
+//		}
+//
+//		System.out.println("Connecting to one of servers");
+//		kvClient.handleCommand("connect "+ hosts[1] + " "+ ports[1]);
+//		kvClient.handleCommand("put k1 v1");
+//		kvClient.handleCommand("put k2 v2");
+//		kvClient.handleCommand("put k3 v3");
+//		kvClient.handleCommand("put k4 v4");
+//
+//		System.out.println("Removing Node");
+//        response = ecsClient.handleCommand("removeNode " + name);
+//        System.out.println("Remove node response: " + response);
+//
+//		assertEquals(kvClient.handleCommand("get k1"), "v1");
+//		assertEquals(kvClient.handleCommand("get k2"), "v2");
+//		assertEquals(kvClient.handleCommand("get k3"), "v3");
+//		assertEquals(kvClient.handleCommand("get k4"), "v4");
+//
+//		kvClient.handleCommand("put k1");
+//		kvClient.handleCommand("put k2");
+//		kvClient.handleCommand("put k3");
+//		kvClient.handleCommand("put k4");
+//
+//		System.out.println("Shutting Down");
+//		ecsClient.handleCommand("shutDown");
+//		int activeServers= ecsClient.activeServers.size();
+//		assertEquals(0,activeServers);
+//	}
+//
+//	public void testFlushData() throws Exception {
+//
+////        int port = 60000;
 //        int cachSize = 100;
 //        String serverName = "testServer";
 //
@@ -626,10 +630,104 @@ public class AdditionalTest extends TestCase {
 //        ecsClient.handleCommand("shutDown");
 //        int activeServers= ecsClient.activeServers.size();
 //        assertEquals(0,activeServers);
+
 		assertTrue(true);
 	}
 
 	public void testWriteLock(){
 		assertTrue(true);
+	}*/
+
+	// MILESTONE 4 TESTS
+
+	@Test
+	public void testDHKE() throws Exception {
+
+		// Confirm DHKE is working properly
+
+		int port_no = 50010;
+
+		KVServer server = new KVServer(port_no, 100, "FIFO", "testServer");
+	        server.start();
+
+		Thread.sleep(1000);
+
+		// Initialize sockets
+		Socket clientSocket = null;
+		CommModule clientComm = null;
+		try {
+			clientSocket = new Socket("localhost", port_no);
+			clientComm = new CommModule(clientSocket, null);
+		} catch (IOException e) {
+			System.out.println("Error! Cannot open socket: " + e);
+		}
+
+		// Look at CommModule's keys
+		byte[] clientKey = null;
+		clientKey = clientComm.key;
+
+		System.out.println("Key is: " + Arrays.toString(clientKey));
+
+		clientSocket.close();
+		clientComm.closeConnection();
+
+		assertNotNull(clientKey);
 	}
+
+	@Test
+	public void testFastModExp() {
+
+		BigInteger G = BigInteger.TWO;
+		int x = 20;
+		BigInteger p = new BigInteger("1000000");
+
+		BigInteger fmeVal = CommModule.fastModExp(G, x, p); // Compute g^x mod p with fast mod exp
+
+		BigInteger goldenVal = G.pow(x).mod(p); // Compute g^x mod p with java BigInteger method
+
+		System.out.println("Fast mod exp val: " + fmeVal.toString());
+		System.out.println("Golden val: " + goldenVal.toString());
+
+		assertEquals(fmeVal.compareTo(goldenVal), 0);
+	}
+
+	@Test
+	public void testFastModExpSpeed() {
+
+		int i = 0;
+
+		BigInteger G = BigInteger.TWO;
+		int x = 65535;
+		BigInteger p = new BigInteger("FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD1" +
+                                            "29024E088A67CC74020BBEA63B139B22514A08798E3404DD" +
+                                            "EF9519B3CD3A431B302B0A6DF25F14374FE1356D6D51C245" +
+                                            "E485B576625E7EC6F44C42E9A637ED6B0BFF5CB6F406B7ED" +
+                                            "EE386BFB5A899FA5AE9F24117C4B1FE649286651ECE45B3D" +
+                                            "C2007CB8A163BF0598DA48361C55D39A69163FA8FD24CF5F" +
+                                            "83655D23DCA3AD961C62F356208552BB9ED529077096966D" +
+                                            "670C354E4ABC9804F1746C08CA237327FFFFFFFFFFFFFFFF", 16);
+
+		long startTimeStd = System.nanoTime();
+		for (i=0; i<1000; i++){
+			BigInteger goldenVal = G.pow(x).mod(p); // Compute g^x mod p with java BigInteger method
+		}
+		long endTimeStd = System.nanoTime();
+
+		long stdTimeMs = (endTimeStd-startTimeStd);
+
+		long startTimeFast = System.nanoTime();
+		for (i=0; i<1000; i++) {
+			BigInteger fmeVal = CommModule.fastModExp(G, x, p); // Compute g^x mod p with fast mod exp
+		}
+		long endTimeFast = System.nanoTime();
+
+		long fastTimeMs = (endTimeFast-startTimeFast);
+
+		System.out.println("Fast mod exp time (ns): " + String.valueOf(fastTimeMs));
+		System.out.println("Std mod exp time (ns): " + String.valueOf(stdTimeMs));
+
+		assertTrue(fastTimeMs < stdTimeMs);
+	}
+
+
 }

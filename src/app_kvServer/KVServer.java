@@ -51,7 +51,7 @@ public class KVServer extends Thread implements IKVServer{
 	private Socket clientSocket;
 	private CommModule clientComm;
 	private KVStore store;
-
+    private publisher pub;
 
 	/**
 	 * Start KV Server at given port
@@ -322,11 +322,13 @@ public class KVServer extends Thread implements IKVServer{
 
 	@Override
 	public String getKV(String key) throws Exception{
+
 		return storage.get(key);
 	}
 
 	@Override
 	public void putKV(String key, String value) throws Exception{
+		pub.pub("KV change -->"+key+":"+value);
 		storage.put(key, value);
 	}
 
@@ -370,6 +372,8 @@ public class KVServer extends Thread implements IKVServer{
 	 * Loops until the the server should be closed. Creates comm module for each client bind.
 	 */
 	public void run(){
+		pub = new publisher();
+		new Thread(pub).start();
 
 		this.running = initializeServer();
 		try {
@@ -442,6 +446,9 @@ public class KVServer extends Thread implements IKVServer{
 	public static void main(String[] args) {
 
 		try {
+
+
+
 			new LogSetup("logs/server.log", Level.ALL);
 			if(args.length != 4) {
 				System.out.println("Error! Invalid number of arguments!");

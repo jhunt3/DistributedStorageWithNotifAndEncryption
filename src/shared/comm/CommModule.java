@@ -37,7 +37,7 @@ public class CommModule implements ICommModule, Runnable {
     private KVServer server;
     private boolean isOpen;
     private int secretInt; // x or y in g^(xy) mod p for Diffie-Hellman key exchange
-    private byte[] key; // encryption key
+    public byte[] key; // encryption key. public for testing
     private int g = 2; // generator number
     private BigInteger p = new BigInteger("FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD1" +
                                             "29024E088A67CC74020BBEA63B139B22514A08798E3404DD" +
@@ -462,7 +462,7 @@ public class CommModule implements ICommModule, Runnable {
 	    logger.debug("Key is: " + Arrays.toString(this.key));
     }
 
-    private BigInteger fastModExp(BigInteger G, int x, BigInteger p) { // Compute g^x mod(p) fast using exp by squaring
+    public static BigInteger fastModExp(BigInteger G, int x, BigInteger p) { // Compute g^x mod(p) fast using exp by squaring
 
         if (x == 0) {
             return BigInteger.ONE;
