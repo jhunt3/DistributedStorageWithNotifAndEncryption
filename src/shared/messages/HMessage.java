@@ -1,6 +1,7 @@
 package shared.messages;
+import java.io.Serializable;
 
-public class HMessage {
+public class HMessage implements Serializable{
     public byte[] message;
     public byte[] hmac;
     public HMessage(byte[] message, byte[] hmac){

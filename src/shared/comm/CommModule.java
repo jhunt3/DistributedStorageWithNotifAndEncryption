@@ -198,13 +198,14 @@ public class CommModule implements ICommModule, Runnable {
             hMsg = (HMessage) this.input.readObject();
             byte[] encodedKvMessage = hMsg.getMessage();
             // check if same hash
+            logger.info("Comparing HMAC...");
             if (!Arrays.equals(hMsg.getHmac(), calculateHMAC(encodedKvMessage, this.key))){
                 logger.error("HMACs do not match! Message has been compromised");
             }
             byte[] serializedKvMessage = this.deCipher.doFinal(encodedKvMessage);
             msg = (KVMessage) SerializationUtils.deserialize(serializedKvMessage);
         } catch (Exception e) {
-            logger.error("No message.");
+            logger.error(e);
         }
 
         if (msg != null){
@@ -269,7 +270,8 @@ public class CommModule implements ICommModule, Runnable {
         } catch (IllegalBlockSizeException e) {
             e.printStackTrace();
         }
-
+        logger.info("HMessage: ");
+        logger.info(msg.toString());
         try {
             this.output.writeObject(msg);
             this.output.flush();
