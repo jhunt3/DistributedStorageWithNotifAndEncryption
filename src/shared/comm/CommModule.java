@@ -23,6 +23,10 @@ import java.util.Random;
 import static shared.messages.KVMessage.StatusType;
 import static shared.messages.KVMessage.StatusType.*;
 
+// Milestone 4 (Security)
+import javax.crypto.Cipher;
+
+
 public class CommModule implements ICommModule, Runnable {
 
     private static Logger logger = Logger.getRootLogger();
