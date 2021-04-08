@@ -55,10 +55,6 @@ public class CommModule implements ICommModule, Runnable {
     private Cipher enCipher;
     private Cipher deCipher;
     private SecretKey secretKey;
-    private CipherOutputStream cipherOutputStream;
-    private CipherInputStream cipherInputStream;
-    private ObjectOutputStream cipherOutput;
-    private ObjectInputStream cipherInput;
 
     /**
      * @param socket Client Socket (output of socket.accept() for the server, socket for the client), or ECS Socket.

@@ -4,6 +4,7 @@ import app_kvClient.KVClient;
 import app_kvECS.ECSClient;
 import app_kvServer.KVServer;
 import client.KVStore;
+import org.apache.commons.lang.SerializationUtils;
 import org.junit.Test;
 import ecs.IECSNode;
 import ecs.ECSNode;
@@ -17,11 +18,18 @@ import java.io.IOException;
 import java.math.BigInteger;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
+import java.util.Formatter;
+import java.util.HashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.Random;
+import javax.crypto.*;
+import javax.crypto.spec.SecretKeySpec;
 import javax.jms.*;
 import org.apache.activemq.ActiveMQConnectionFactory;
 
@@ -43,8 +51,9 @@ public class AdditionalTest extends TestCase {
 //		}
 	}
 
-//	public void tearDown() {
-//		kvStore.disconnect();
+//	public void tearDown() throws IOException {
+//		ecsClient.shutdown();
+//		kvClient = null;
 //	}
 
 	/**
@@ -732,45 +741,105 @@ public class AdditionalTest extends TestCase {
 	}
 
 
+//	@Test
+//	public void testPublishing() throws Exception {
+//
+//		String response;
+//		response=ecsClient.handleCommand("addNode");
+//		System.out.println(response);
+//		String[] addrs = response.split(" ");
+//		String addrprt=addrs[4];
+//		String addr=addrprt.split(":")[0];
+//		int prt = Integer.parseInt(addrprt.split(":")[1]);
+//		kvClient.handleCommand("connect localhost "+String.valueOf(prt));
+//		ActiveMQConnectionFactory connectionFactory = null;
+//		MessageConsumer consumer;
+//		Connection connection;
+//		Session session;
+//		connectionFactory = new ActiveMQConnectionFactory("tcp://localhost:61616");
+//		try {
+//			connection = connectionFactory.createConnection();
+//			connection.start();
+//			session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+//
+//			Destination destination = session.createTopic("Changes");
+//
+//			consumer = session.createConsumer(destination);
+//			kvClient.handleCommand("put 1 1");
+//			Message message = consumer.receive();
+//			TextMessage textmessage = (TextMessage) message;
+//
+//			System.out.println(textmessage.getText());
+//			assertEquals("KV change --> 1:1",textmessage.getText());
+//			session.close();
+//			connection.close();
+//		}catch(JMSException e){
+//			e.printStackTrace();
+//		}
+//		ecsClient.handleCommand("shutDown");
+//
+//	}
+
 	@Test
-	public void testPublishing() throws Exception {
-
-		String response;
-		response=ecsClient.handleCommand("addNode");
-		System.out.println(response);
-		String[] addrs = response.split(" ");
-		String addrprt=addrs[4];
-		String addr=addrprt.split(":")[0];
-		int prt = Integer.parseInt(addrprt.split(":")[1]);
-		kvClient.handleCommand("connect localhost "+String.valueOf(prt));
-		ActiveMQConnectionFactory connectionFactory = null;
-		MessageConsumer consumer;
-		Connection connection;
-		Session session;
-		connectionFactory = new ActiveMQConnectionFactory("tcp://localhost:61616");
-		try {
-			connection = connectionFactory.createConnection();
-			connection.start();
-			session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
-
-			Destination destination = session.createTopic("Changes");
-
-			consumer = session.createConsumer(destination);
-			kvClient.handleCommand("put 1 1");
-			Message message = consumer.receive();
-			TextMessage textmessage = (TextMessage) message;
-
-			System.out.println(textmessage.getText());
-			assertEquals("KV change --> 1:1",textmessage.getText());
-			session.close();
-			connection.close();
-		}catch(JMSException e){
-			e.printStackTrace();
-		}
-		ecsClient.handleCommand("shutDown");
-
+	public void testObjectSerialization(){
+		String key = "key";
+		String value = "value";
+		HashMap<String, String> metadata = new HashMap<>();
+		metadata.put("SampleKey", "SampleValue");
+		KVMsg kvMsg = new KVMsg(START, key, value, metadata);
+		byte[] serializedMsg = SerializationUtils.serialize(kvMsg);
+		KVMsg deserialized = (KVMsg) SerializationUtils.deserialize(serializedMsg);
+		assertEquals(kvMsg.getKey(), deserialized.getKey());
+		assertEquals(kvMsg.getStatus(), deserialized.getStatus());
+		assertEquals(kvMsg.getValue(), deserialized.getValue());
+		assertEquals(kvMsg.getMetadata(), deserialized.getMetadata());
 	}
 
+	public static String calculateHMAC(byte[] data, byte[] key)
+			throws NoSuchAlgorithmException, InvalidKeyException
+	{
+		SecretKeySpec secretKeySpec = new SecretKeySpec(key, "HmacSHA256");
+		Mac mac = Mac.getInstance("HmacSHA256");
+		mac.init(secretKeySpec);
+		return toHexString(mac.doFinal(data));
+	}
+	private static String toHexString(byte[] bytes) {
+		Formatter formatter = new Formatter();
+		for (byte b : bytes) {
+			formatter.format("%02x", b);
+		}
+		return formatter.toString();
+	}
 
+	@Test
+	public void testCalculateHmac() throws InvalidKeyException, NoSuchAlgorithmException {
+		String message = "message";
+		String secretKey = "shhh_secret_key";
+		String hmac = calculateHMAC(message.getBytes(), secretKey.getBytes());
+		assertEquals(hmac, "ff3135ed2c609ebb97dbb6118a6ac62bdd1aad22fe9209788409016d555fce89");
+	}
 
+	@Test
+	public void testEncryptDecryptSerializedObject() throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException {
+		Cipher enCipher = Cipher.getInstance("DES");
+		Cipher deCipher = Cipher.getInstance("DES");
+		SecretKey secretKey = KeyGenerator.getInstance("DES").generateKey();
+		enCipher.init(Cipher.ENCRYPT_MODE, secretKey);
+		deCipher.init(Cipher.DECRYPT_MODE, secretKey);
+
+		String key = "key";
+		String value = "value";
+		HashMap<String, String> metadata = new HashMap<>();
+		metadata.put("SampleKey", "SampleValue");
+		KVMsg kvMsg = new KVMsg(START, key, value, metadata);
+		byte[] serializedMsg = SerializationUtils.serialize(kvMsg);
+		byte[] encryptedMsg = enCipher.doFinal(serializedMsg);
+		assertNotSame(serializedMsg, encryptedMsg);
+		byte[] decryptedMsg = deCipher.doFinal(encryptedMsg);
+		KVMsg deserialized = (KVMsg) SerializationUtils.deserialize(decryptedMsg);
+		assertEquals(deserialized.getKey(), kvMsg.getKey());
+		assertEquals(kvMsg.getStatus(), deserialized.getStatus());
+		assertEquals(kvMsg.getValue(), deserialized.getValue());
+		assertEquals(kvMsg.getMetadata(), deserialized.getMetadata());
+	}
 }
