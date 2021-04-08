@@ -27,11 +27,12 @@ public class KVClient implements IKVClient {
     private boolean stop = false;
     private static final int BUFFER_SIZE = 1024;
     private static final int DROP_SIZE = 1024 * BUFFER_SIZE;
-
+    private subscriber sub;
     private String serverAddress;
     private int serverPort;
 
     public void run() throws Exception {
+
         while(!stop) {
             stdin = new BufferedReader(new InputStreamReader(System.in));
             System.out.print(PROMPT);
@@ -115,6 +116,13 @@ public class KVClient implements IKVClient {
             System.out.println("Disconnected from server");
             logger.info("Disconnected from server");
             return "Disconnected from server";
+        }else if(tokens[0].equals("subscribe")) {
+            sub = new subscriber();
+            new Thread(sub).start();
+            return "subscribed";
+        } else if(tokens[0].equals("unsubscribe")) {
+            sub.running=false;
+            return "unsubscribed";
         } else if(tokens[0].equals("put")) {
             if(!running){
                 System.out.println("ERROR: Not connected to server");
