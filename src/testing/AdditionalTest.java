@@ -730,4 +730,47 @@ public class AdditionalTest extends TestCase {
 
 		assertTrue(fastTimeMs < stdTimeMs);
 	}
+
+
+	@Test
+	public void testPublishing() throws Exception {
+
+		String response;
+		response=ecsClient.handleCommand("addNode");
+		System.out.println(response);
+		String[] addrs = response.split(" ");
+		String addrprt=addrs[4];
+		String addr=addrprt.split(":")[0];
+		int prt = Integer.parseInt(addrprt.split(":")[1]);
+		kvClient.handleCommand("connect localhost "+String.valueOf(prt));
+		ActiveMQConnectionFactory connectionFactory = null;
+		MessageConsumer consumer;
+		Connection connection;
+		Session session;
+		connectionFactory = new ActiveMQConnectionFactory("tcp://localhost:61616");
+		try {
+			connection = connectionFactory.createConnection();
+			connection.start();
+			session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+
+			Destination destination = session.createTopic("Changes");
+
+			consumer = session.createConsumer(destination);
+			kvClient.handleCommand("put 1 1");
+			Message message = consumer.receive();
+			TextMessage textmessage = (TextMessage) message;
+
+			System.out.println(textmessage.getText());
+			assertEquals("KV change --> 1:1",textmessage.getText());
+			session.close();
+			connection.close();
+		}catch(JMSException e){
+			e.printStackTrace();
+		}
+		ecsClient.handleCommand("shutDown");
+
+	}
+
+
+
 }

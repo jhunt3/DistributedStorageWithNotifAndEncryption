@@ -4,12 +4,12 @@ import javax.jms.*;
 import org.apache.activemq.ActiveMQConnectionFactory;
 
 
-public class publisher implements Runnable {
+public class Publisher implements Runnable {
 
     Session session=null;
     MessageProducer producer=null;
     boolean running = true;
-    public publisher(){
+    public Publisher(){
 
         try {
             ActiveMQConnectionFactory connectionFactory=new ActiveMQConnectionFactory("tcp://localhost:61616");

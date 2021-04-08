@@ -27,7 +27,7 @@ public class KVClient implements IKVClient {
     private boolean stop = false;
     private static final int BUFFER_SIZE = 1024;
     private static final int DROP_SIZE = 1024 * BUFFER_SIZE;
-    private subscriber sub;
+    private Subscriber sub;
     private boolean subbed=false;
     private String serverAddress;
     private int serverPort;
@@ -120,7 +120,7 @@ public class KVClient implements IKVClient {
         }else if(tokens[0].equals("subscribe")) {
             if(!subbed) {
                 subbed = true;
-                sub = new subscriber();
+                sub = new Subscriber();
                 new Thread(sub).start();
                 return "subscribed";
             }else{
