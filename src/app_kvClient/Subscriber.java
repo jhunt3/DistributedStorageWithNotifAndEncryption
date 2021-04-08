@@ -2,7 +2,7 @@ package app_kvClient;
 import javax.jms.*;
 import org.apache.log4j.Logger;
 import org.apache.activemq.ActiveMQConnectionFactory;
-public class subscriber implements Runnable{
+public class Subscriber implements Runnable{
     private Logger logger = Logger.getRootLogger();
     ActiveMQConnectionFactory connectionFactory = null;
     MessageConsumer consumer;
