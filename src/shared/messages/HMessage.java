@@ -16,5 +16,4 @@ public class HMessage implements Serializable{
     public byte[] getHmac(){
         return this.hmac;
     }
-
 }

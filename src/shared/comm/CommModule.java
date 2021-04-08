@@ -195,6 +195,7 @@ public class CommModule implements ICommModule, Runnable {
         HMessage hMsg;
 
         try {
+            logger.info("Reading object...");
             hMsg = (HMessage) this.input.readObject();
             byte[] encodedKvMessage = hMsg.getMessage();
             // check if same hash
@@ -271,7 +272,8 @@ public class CommModule implements ICommModule, Runnable {
             e.printStackTrace();
         }
         logger.info("HMessage: ");
-        logger.info(msg.toString());
+        logger.info(msg.getMessage().toString());
+        logger.info(msg.getHmac().toString());
         try {
             this.output.writeObject(msg);
             this.output.flush();
