@@ -650,7 +650,7 @@ public class AdditionalTest extends TestCase {
 		int port_no = 50010;
 
 		KVServer server = new KVServer(port_no, 100, "FIFO", "testServer");
-	        server.start();
+		server.start();
 
 		Thread.sleep(1000);
 
@@ -669,7 +669,8 @@ public class AdditionalTest extends TestCase {
 		clientKey = clientComm.key;
 
 		System.out.println("Key is: " + Arrays.toString(clientKey));
-
+		//server.shutDown();
+		//ecsClient.handleCommand("shutDown");
 		clientSocket.close();
 		clientComm.closeConnection();
 
@@ -733,7 +734,47 @@ public class AdditionalTest extends TestCase {
 
 
 	@Test
-	public void testPublishing() throws Exception {
+	public void testPutPublishing() throws Exception {
+		ecsClient.handleCommand("addNode");
+		ecsClient.handleCommand("shutDown");
+		String response;
+		response=ecsClient.handleCommand("addNode");
+		System.out.println(response);
+		String[] addrs = response.split(" ");
+		String addrprt=addrs[4];
+		String addr=addrprt.split(":")[0];
+		int prt = Integer.parseInt(addrprt.split(":")[1]);
+		kvClient.handleCommand("connect localhost "+String.valueOf(prt));
+		ActiveMQConnectionFactory connectionFactory = null;
+		MessageConsumer consumer;
+		Connection connection;
+		Session session;
+		connectionFactory = new ActiveMQConnectionFactory("tcp://localhost:61616");
+		try {
+			connection = connectionFactory.createConnection();
+			connection.start();
+			session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+
+			Destination destination = session.createTopic("Changes");
+
+			consumer = session.createConsumer(destination);
+			kvClient.handleCommand("put 1 1");
+			Message message = consumer.receive();
+			TextMessage textmessage = (TextMessage) message;
+
+			System.out.println(textmessage.getText());
+			assertEquals("Put --> 1:1",textmessage.getText());
+			session.close();
+			connection.close();
+		}catch(JMSException e){
+			e.printStackTrace();
+		}
+		ecsClient.handleCommand("shutDown");
+
+	}
+
+	@Test
+	public void testDeletePublishing() throws Exception {
 
 		String response;
 		response=ecsClient.handleCommand("addNode");
@@ -761,7 +802,15 @@ public class AdditionalTest extends TestCase {
 			TextMessage textmessage = (TextMessage) message;
 
 			System.out.println(textmessage.getText());
-			assertEquals("KV change --> 1:1",textmessage.getText());
+			assertEquals("Put --> 1:1",textmessage.getText());
+
+			kvClient.handleCommand("put 1");
+			message = consumer.receive();
+			textmessage = (TextMessage) message;
+
+			System.out.println(textmessage.getText());
+			assertEquals("Delete --> 1:null",textmessage.getText());
+
 			session.close();
 			connection.close();
 		}catch(JMSException e){
@@ -770,7 +819,115 @@ public class AdditionalTest extends TestCase {
 		ecsClient.handleCommand("shutDown");
 
 	}
+	@Test
+	public void testUpdatePublishing() throws Exception {
+
+		String response;
+		response=ecsClient.handleCommand("addNode");
+		System.out.println(response);
+		String[] addrs = response.split(" ");
+		String addrprt=addrs[4];
+		String addr=addrprt.split(":")[0];
+		int prt = Integer.parseInt(addrprt.split(":")[1]);
+		kvClient.handleCommand("connect localhost "+String.valueOf(prt));
+		ActiveMQConnectionFactory connectionFactory = null;
+		MessageConsumer consumer;
+		Connection connection;
+		Session session;
+		connectionFactory = new ActiveMQConnectionFactory("tcp://localhost:61616");
+		try {
+			connection = connectionFactory.createConnection();
+			connection.start();
+			session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+
+			Destination destination = session.createTopic("Changes");
+
+			consumer = session.createConsumer(destination);
+			kvClient.handleCommand("put 1 1");
+			Message message = consumer.receive();
+			TextMessage textmessage = (TextMessage) message;
+
+			System.out.println(textmessage.getText());
+			assertEquals("Put --> 1:1",textmessage.getText());
+
+			kvClient.handleCommand("put 1 2");
+			message = consumer.receive();
+			textmessage = (TextMessage) message;
+
+			System.out.println(textmessage.getText());
+			assertEquals("Update --> 1:2",textmessage.getText());
+
+			session.close();
+			connection.close();
+		}catch(JMSException e){
+			e.printStackTrace();
+		}
+		ecsClient.handleCommand("shutDown");
+
+	}
+	@Test
+	public void testMultiNodePublishing() throws Exception {
+
+		String response;
+		response=ecsClient.handleCommand("addNodes 8");
+		System.out.println(response);
+		String[] addrs = response.split(" ");
+		String addrprt=addrs[4];
+		String addr=addrprt.split(":")[0];
+		int prt = Integer.parseInt(addrprt.split(":")[1]);
+		kvClient.handleCommand("connect localhost "+String.valueOf(prt));
+		ActiveMQConnectionFactory connectionFactory = null;
+		MessageConsumer consumer;
+		Connection connection;
+		Session session;
+		connectionFactory = new ActiveMQConnectionFactory("tcp://localhost:61616");
+		try {
+			connection = connectionFactory.createConnection();
+			connection.start();
+			session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+
+			Destination destination = session.createTopic("Changes");
+
+			consumer = session.createConsumer(destination);
 
 
+			kvClient.handleCommand("put a a");
+			Message message = consumer.receive();
+			TextMessage textmessage = (TextMessage) message;
+
+			System.out.println(textmessage.getText());
+			assertEquals("Put --> a:a",textmessage.getText());
+
+			kvClient.handleCommand("put b b");
+			message = consumer.receive();
+			textmessage = (TextMessage) message;
+
+			System.out.println(textmessage.getText());
+			assertEquals("Put --> b:b",textmessage.getText());
+
+			kvClient.handleCommand("put c c");
+			message = consumer.receive();
+			textmessage = (TextMessage) message;
+
+			System.out.println(textmessage.getText());
+			assertEquals("Put --> c:c",textmessage.getText());
+
+			kvClient.handleCommand("put d d");
+			message = consumer.receive();
+			textmessage = (TextMessage) message;
+
+			System.out.println(textmessage.getText());
+			assertEquals("Put --> d:d",textmessage.getText());
+
+
+
+			session.close();
+			connection.close();
+		}catch(JMSException e){
+			e.printStackTrace();
+		}
+		ecsClient.handleCommand("shutDown");
+
+	}
 
 }

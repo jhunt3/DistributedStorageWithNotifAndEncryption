@@ -327,8 +327,16 @@ public class KVServer extends Thread implements IKVServer{
 	}
 
 	@Override
-	public void putKV(String key, String value) throws Exception{
-		pub.pub("KV change --> "+key+":"+value);
+	public void putKV(String key, String value, boolean inStorage, boolean delete) throws Exception{
+		String type="";
+		if(inStorage && delete){
+			type="Delete";
+		}else if(inStorage && !delete){
+			type="Update";
+		}else if(!inStorage){
+			type="Put";
+		}
+		pub.pub(type+" --> "+key+":"+value);
 		storage.put(key, value);
 	}
 

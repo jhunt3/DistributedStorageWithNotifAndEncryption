@@ -375,7 +375,7 @@ public class ECSClient implements IECSClient, Watcher {
     }
 
     @Override
-    public boolean shutdown() throws IOException {
+    public boolean shutdown() throws IOException, InterruptedException {
         //boolean allsuccess=true;
         for(int i=0;i<activeServers.size();i++) {
 
@@ -386,6 +386,7 @@ public class ECSClient implements IECSClient, Watcher {
             this.clientSocket = new Socket(host, port);
             this.clientComm = new CommModule(this.clientSocket, null);
             this.clientComm.sendAdminMsg(null, SHUTDOWN, null, null);
+            Thread.sleep(500);
             KVAdminMsg replyMsg = (KVAdminMsg) clientComm.receiveMsg();
             if(replyMsg.getStatus()!=SHUTDOWN_SUCCESS){
                 //allsuccess=false;
@@ -710,6 +711,7 @@ public class ECSClient implements IECSClient, Watcher {
     public boolean awaitNodes(int count, int timeout) throws Exception {
         long t = System.currentTimeMillis();
         long f = t+timeout;
+        Thread.sleep(500);
         while(System.currentTimeMillis()<f) {
             List<String> attendance = zk.getChildren("/keeper",true);
             if(attendance.size()== count){

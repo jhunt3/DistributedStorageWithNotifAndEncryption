@@ -352,7 +352,7 @@ public class CommModule implements ICommModule, Runnable {
                                 out_value = value;
                                 boolean delete = (value == null || value.equals("null") || value.equals(""));
                                 if (this.server.inStorage(key)) { // key currently in storage
-                                    this.server.putKV(key, value);
+                                    this.server.putKV(key, value,true,delete);
                                     if (delete) { // Value is null. User wants to delete the key
                                         out_status = DELETE_SUCCESS;
                                     } else {
@@ -362,7 +362,7 @@ public class CommModule implements ICommModule, Runnable {
                                     if (delete) { // Value is null. User wants to delete the key, but it is not present
                                         out_status = DELETE_ERROR;
                                     } else {
-                                        this.server.putKV(key, value);
+                                        this.server.putKV(key, value,false,delete);
                                         out_status = PUT_SUCCESS;
                                     }
                                 }
