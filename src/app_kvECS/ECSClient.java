@@ -387,16 +387,20 @@ public class ECSClient implements IECSClient, Watcher {
             this.clientComm = new CommModule(this.clientSocket, null);
             this.clientComm.sendAdminMsg(null, SHUTDOWN, null, null);
             Thread.sleep(500);
-            KVAdminMsg replyMsg = (KVAdminMsg) clientComm.receiveMsg();
-            if(replyMsg.getStatus()!=SHUTDOWN_SUCCESS){
-                //allsuccess=false;
-                System.out.println(name+" not shutdown");
-            }else{
-                System.out.println(name+" shutdown");
-                idleServers.add(activeServers.get(i));
-                activeServers.remove(i);
-                i--;
-            }
+//            KVAdminMsg replyMsg = (KVAdminMsg) clientComm.receiveMsg();
+//            if(replyMsg.getStatus()!=SHUTDOWN_SUCCESS){
+//                //allsuccess=false;
+//                System.out.println(name+" not shutdown");
+//            }else{
+//                System.out.println(name+" shutdown");
+//                idleServers.add(activeServers.get(i));
+//                activeServers.remove(i);
+//                i--;
+//            }
+
+            idleServers.add(activeServers.get(i));
+            activeServers.remove(i);
+            i--;
             this.clientSocket = null;
             this.clientComm.closeConnection();
         }

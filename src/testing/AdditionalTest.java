@@ -51,10 +51,12 @@ public class AdditionalTest extends TestCase {
 //		}
 	}
 
-//	public void tearDown() throws IOException {
-//		ecsClient.shutdown();
-//		kvClient = null;
-//	}
+	public void tearDown() throws IOException, InterruptedException {
+		//ecsClient.shutdown();
+		//kvClient = null;
+		Thread.sleep(1000);
+
+	}
 
 	/**
 	 * Check if store initialization works gracefully; if file exists, do nothing, if not, create a file
@@ -695,8 +697,8 @@ public class AdditionalTest extends TestCase {
 	@Test
 
 	public void testPutPublishing() throws Exception {
-		ecsClient.handleCommand("addNode");
-		ecsClient.handleCommand("shutDown");
+//		ecsClient.handleCommand("addNode");
+//		ecsClient.handleCommand("shutDown");
 		String response;
 		response=ecsClient.handleCommand("addNode");
 		System.out.println(response);
@@ -730,6 +732,7 @@ public class AdditionalTest extends TestCase {
 			e.printStackTrace();
 		}
 		ecsClient.handleCommand("shutDown");
+
 
 	}
 
@@ -962,7 +965,7 @@ public class AdditionalTest extends TestCase {
 		int port_no = 50010;
 
 		KVServer server = new KVServer(port_no, 100, "FIFO", "testServer");
-		server.start();
+		new Thread(server).start();
 
 		Thread.sleep(1000);
 

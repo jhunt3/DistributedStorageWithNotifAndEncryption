@@ -528,7 +528,7 @@ public class CommModule implements ICommModule, Runnable {
         byte[] digest = sha256.digest();
 
         this.key = Arrays.copyOfRange(digest, 0, 8); // Get lowest 7 bytes of hash: key
-	    logger.debug("Key is: " + Arrays.toString(this.key));
+	    System.out.println("Key is: " + Arrays.toString(this.key));
     }
 
     public static BigInteger fastModExp(BigInteger G, int x, BigInteger p) { // Compute g^x mod(p) fast using exp by squaring
